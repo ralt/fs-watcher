@@ -114,11 +114,11 @@ Here is the declaration of this class:
 
 A \code{watcher} object only has two slots: a \code{path} and its \code{mtime}.
 The \code{mtime} is the modification time. It is the last time a file or folder
-were changed.
+was changed.
 
 For a folder, the \code{mtime} changes when a file or directory is added,
 deleted or renamed in it. There is no recursivity involved for the \code{mtime},
-so only the files and folders at depth 1 are taken into account.
+so only the direct descendants are taken into account.
 
 For a file, the \code{mtime} changes whenever its content changes.
 
