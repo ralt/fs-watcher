@@ -3,10 +3,7 @@
   :description "Filesystem watcher for changes"
   :author "Florian Margaine <florian@margaine.com>"
   :license "MIT License"
-  :depends-on ("com.gigamonkeys.pathnames")
+  :depends-on ("com.gigamonkeys.pathnames" "alexandria")
   :components ((:file "src/package")
-               (:file "src/watcher")
-               (:file "src/dir-watcher")
-               (:file "src/file-watcher")
                (:file "src/fs-watcher")))
 

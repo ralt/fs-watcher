@@ -1,18 +1,42 @@
 (in-package #:fs-watcher)
 
-(defvar *delay* 1)
-
-(defvar *watchers* (make-array 0
-                               :adjustable t
-                               :fill-pointer 0))
-
-(defvar *onchange*)
-
-(defun watch (pathnames listener)
+(defun watch (pathnames callback &key (delay 1))
   "Watches a list of pathnames"
-  (setf *onchange* listener)
-  (new-watchers pathnames)
+  (unless (listp pathnames)
+    (setf pathnames (list pathnames)))
+  (setf pathnames (flatten (dir-contents pathnames)))
+  (let ((mtimes (make-hash-table)))
+    (map nil
+         #'(lambda (pathname)
+             (setf (gethash pathname mtimes) (mtime pathname)))
+         pathnames)
+    (run-loop pathnames mtimes callback delay)))
+
+(defun dir-contents (pathnames)
+  "Returns a list of all the contents in a directory"
+  (mapcar #'(lambda (pathname)
+              (when (directory-p pathname)
+                (let ((subnodes (list-directory pathname)))
+                  (setf pathnames (dir-contents (list-directory pathname)))
+                  (push (list-directory pathname)
+                        pathnames))))
+          pathnames))
+
+(defun run-loop (pathnames mtimes callback delay)
+  "The main loop constantly polling the filesystem"
   (loop
-    (progn
-      (sleep *delay*)
-      (loop for watcher across *watchers* do (check watcher)))))
+    (sleep delay)
+    (map nil #'(lambda (pathname)
+                 (let ((mtime (mtime pathname)))
+                   (unless (eq mtime
+                               (gethash pathname mtimes))
+                     (funcall callback pathname)
+                     (if mtime
+                       (setf (gethash pathname mtimes) mtime)
+                       (remhash pathname mtimes)))))
+         pathnames)))
+
+(defun mtime (pathname)
+  "Returns the mtime of a pathname"
+  (when (probe-file pathname)
+    (file-write-date pathname)))
