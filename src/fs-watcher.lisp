@@ -16,10 +16,10 @@
   "Returns a list of all the contents in a directory"
   (mapcar #'(lambda (pathname)
               (when (directory-p pathname)
-                (let ((subnodes (list-directory pathname)))
-                  (setf pathnames (dir-contents (list-directory pathname)))
-                  (push (list-directory pathname)
-                        pathnames))))
+                (walk-directory pathname
+                                #'(lambda (pathname)
+                                    (push pathname pathnames))
+                                :directories t)))
           pathnames))
 
 (defun run-loop (pathnames mtimes callback delay)
