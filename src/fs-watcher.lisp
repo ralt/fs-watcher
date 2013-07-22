@@ -26,14 +26,15 @@
   "The main loop constantly polling the filesystem"
   (loop
     (sleep delay)
-    (map nil #'(lambda (pathname)
-                 (let ((mtime (mtime pathname)))
-                   (unless (eq mtime
-                               (gethash pathname mtimes))
-                     (funcall callback pathname)
-                     (if mtime
-                       (setf (gethash pathname mtimes) mtime)
-                       (remhash pathname mtimes)))))
+    (map nil
+         #'(lambda (pathname)
+             (let ((mtime (mtime pathname)))
+               (unless (eq mtime
+                           (gethash pathname mtimes))
+                 (funcall callback pathname)
+                 (if mtime
+                   (setf (gethash pathname mtimes) mtime)
+                   (remhash pathname mtimes)))))
          pathnames)))
 
 (defun mtime (pathname)
