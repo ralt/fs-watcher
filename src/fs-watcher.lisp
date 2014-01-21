@@ -27,11 +27,11 @@
 (defun run-loop (pathnames mtimes callback delay)
   "The main loop constantly polling the filesystem"
   (loop
-    (sleep delay)
-    (map nil
-         #'(lambda (pathname)
-             (let ((mtime (mtime pathname)))
-               (unless (eq mtime
+     (sleep delay)
+     (map nil
+          #'(lambda (pathname)
+              (let ((mtime (mtime pathname)))
+                (unless (= mtime
                            (gethash pathname mtimes))
                  (funcall callback pathname)
                  (if mtime
