@@ -7,8 +7,8 @@
   (setf pathnames (flatten (dir-contents pathnames)))
   (let ((mtimes (make-hash-table)))
     (map nil
-         #'(lambda (pathname)
-             (setf (gethash pathname mtimes) (mtime pathname)))
+         (lambda (pathname)
+           (setf (gethash pathname mtimes) (mtime pathname)))
          pathnames)
     (run-loop pathnames mtimes callback delay)))
 
@@ -29,14 +29,14 @@
   (loop
      (sleep delay)
      (map nil
-          #'(lambda (pathname)
-              (let ((mtime (mtime pathname)))
-                (unless (= mtime
-                           (gethash pathname mtimes))
-                  (funcall callback pathname)
-                  (if mtime
-                      (setf (gethash pathname mtimes) mtime)
-                      (remhash pathname mtimes)))))
+          (lambda (pathname)
+            (let ((mtime (mtime pathname)))
+              (unless (= mtime
+                         (gethash pathname mtimes))
+                (funcall callback pathname)
+                (if mtime
+                    (setf (gethash pathname mtimes) mtime)
+                    (remhash pathname mtimes)))))
           pathnames)))
 
 (defun mtime (pathname)
