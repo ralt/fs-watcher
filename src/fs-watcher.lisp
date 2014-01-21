@@ -14,13 +14,15 @@
 
 (defun dir-contents (pathnames)
   "Returns a list of all the contents in a directory"
-  (mapcar #'(lambda (pathname)
-              (when (directory-p pathname)
-                (walk-directory pathname
-                                #'(lambda (pathname)
-                                    (push pathname pathnames))
-                                :directories t)))
-          pathnames))
+  (let ((files (list)))
+    (dolist (pathname pathnames)
+      (if (directory-p pathname)
+          (walk-directory pathname
+                          (lambda (file) (push file files))
+                          :directories t)
+          (when (file-p pathname)
+            (push pathname files))))
+    files))
 
 (defun run-loop (pathnames mtimes callback delay)
   "The main loop constantly polling the filesystem"
