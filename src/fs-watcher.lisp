@@ -33,11 +33,11 @@
               (let ((mtime (mtime pathname)))
                 (unless (= mtime
                            (gethash pathname mtimes))
-                 (funcall callback pathname)
-                 (if mtime
-                   (setf (gethash pathname mtimes) mtime)
-                   (remhash pathname mtimes)))))
-         pathnames)))
+                  (funcall callback pathname)
+                  (if mtime
+                      (setf (gethash pathname mtimes) mtime)
+                      (remhash pathname mtimes)))))
+          pathnames)))
 
 (defun mtime (pathname)
   "Returns the mtime of a pathname"
