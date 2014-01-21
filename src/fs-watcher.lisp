@@ -1,45 +1,52 @@
 (in-package #:fs-watcher)
 
-(defun watch (pathnames on-change &key on-delete (delay 1))
+(defun watch (pathnames on-change &key on-new on-delete (delay 1))
   "Watches a list of pathnames"
-  (unless (listp pathnames)
-    (setf pathnames (list pathnames)))
-  (setf pathnames (flatten (dir-contents pathnames)))
-  (let ((mtimes (make-hash-table)))
-    (map nil
-         (lambda (pathname)
-           (setf (gethash pathname mtimes) (mtime pathname)))
-         pathnames)
-    (run-loop pathnames mtimes on-change on-delete delay)))
+  (if (listp pathnames)
+      (setf pathnames (mapcar #'truename pathnames))
+      (setf pathnames (list (truename pathnames))))
+  (let ((mtimes (make-hash-table :test 'equal))
+        (all (list)))
+    (walk-paths pathnames
+                (lambda (pathname)
+                  (setf (gethash pathname mtimes) (mtime pathname))
+                  (push pathname all)))
+    (run-loop pathnames all mtimes on-change on-new on-delete delay)))
 
-(defun dir-contents (pathnames)
+(defun walk-paths (paths file-action)
   "Returns a list of all the contents in a directory"
-  (let ((files (list)))
-    (dolist (pathname pathnames)
-      (if (directory-p pathname)
-          (walk-directory pathname
-                          (lambda (file) (push file files))
-                          :directories t)
-          (when (file-p pathname)
-            (push pathname files))))
-    files))
+  (dolist (path paths)
+    (if (directory-p path)
+        (walk-directory path
+                        (lambda (file) (funcall file-action file) file)
+                        :directories t)
+        (when (file-p path)
+          (funcall path file-action)))))
 
-(defun run-loop (pathnames mtimes on-change on-delete delay)
+(defun run-loop (original all mtimes on-change on-new on-delete delay)
   "The main loop constantly polling the filesystem"
   (loop
      (sleep delay)
-     (dolist (pathname pathnames)
-       (let ((mtime (mtime pathname)))
-         (if mtime
-             (unless (= mtime
-                        (gethash pathname mtimes))
-               (funcall on-change pathname)
-               (setf (gethash pathname mtimes) mtime))
-             (progn
-               (setf pathnames (remove pathname pathnames))
-               (remhash pathname mtimes)
-               (when on-delete
-                 (funcall on-delete pathname))))))))
+     (let ((found (list)))
+       (walk-paths original
+                   (lambda (pathname)
+                     (push pathname found)
+                     (let ((mtime (mtime pathname)))
+                       (if mtime
+                           (if (gethash pathname mtimes)
+                               (unless (= mtime
+                                          (gethash pathname mtimes))
+                                 (funcall on-change pathname)
+                                 (setf (gethash pathname mtimes) mtime))
+                               (progn (when on-new
+                                        (funcall on-new pathname))
+                                      (push pathname all)
+                                      (setf (gethash pathname mtimes) mtime)))))))
+       (dolist (deleted (set-difference all found :test #'equal))
+         (when on-delete
+           (funcall on-delete deleted))
+         (setf all (remove deleted all :test #'equal))
+         (remhash deleted mtimes)))))
 
 (defun mtime (pathname)
   "Returns the mtime of a pathname"
