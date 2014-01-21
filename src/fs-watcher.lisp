@@ -1,6 +1,6 @@
 (in-package #:fs-watcher)
 
-(defun watch (pathnames callback &key (delay 1))
+(defun watch (pathnames on-change &key on-delete (delay 1))
   "Watches a list of pathnames"
   (unless (listp pathnames)
     (setf pathnames (list pathnames)))
@@ -10,7 +10,7 @@
          (lambda (pathname)
            (setf (gethash pathname mtimes) (mtime pathname)))
          pathnames)
-    (run-loop pathnames mtimes callback delay)))
+    (run-loop pathnames mtimes on-change on-delete delay)))
 
 (defun dir-contents (pathnames)
   "Returns a list of all the contents in a directory"
@@ -24,20 +24,22 @@
             (push pathname files))))
     files))
 
-(defun run-loop (pathnames mtimes callback delay)
+(defun run-loop (pathnames mtimes on-change on-delete delay)
   "The main loop constantly polling the filesystem"
   (loop
      (sleep delay)
-     (map nil
-          (lambda (pathname)
-            (let ((mtime (mtime pathname)))
-              (unless (= mtime
-                         (gethash pathname mtimes))
-                (funcall callback pathname)
-                (if mtime
-                    (setf (gethash pathname mtimes) mtime)
-                    (remhash pathname mtimes)))))
-          pathnames)))
+     (dolist (pathname pathnames)
+       (let ((mtime (mtime pathname)))
+         (if mtime
+             (unless (= mtime
+                        (gethash pathname mtimes))
+               (funcall on-change pathname)
+               (setf (gethash pathname mtimes) mtime))
+             (progn
+               (setf pathnames (remove pathname pathnames))
+               (remhash pathname mtimes)
+               (when on-delete
+                 (funcall on-delete pathname))))))))
 
 (defun mtime (pathname)
   "Returns the mtime of a pathname"
