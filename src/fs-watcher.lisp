@@ -29,8 +29,10 @@
     (map nil
          #'(lambda (pathname)
              (let ((mtime (mtime pathname)))
-               (unless (eq mtime
-                           (gethash pathname mtimes))
+               (unless (eql mtime
+                            ;; universal time or nil, so = is ng.
+                            ;; eq between integers is impl-dependent behavior
+                            (gethash pathname mtimes))
                  (funcall callback pathname)
                  (if mtime
                    (setf (gethash pathname mtimes) mtime)
