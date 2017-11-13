@@ -13,14 +13,14 @@
     (run-loop pathnames mtimes callback delay)))
 
 (defun dir-contents (pathnames)
-  "Returns a list of all the contents in a directory"
-  (mapcar #'(lambda (pathname)
-              (when (directory-p pathname)
-                (walk-directory pathname
-                                #'(lambda (pathname)
-                                    (push pathname pathnames))
-                                :directories t)))
-          pathnames))
+  "For each directory, collect the file pathnames recursively. Results are appended and returned as a single list."
+  (let (acc)
+    (dolist (pathname pathnames acc)
+      (if (directory-p pathname)
+          (walk-directory pathname
+                          #'(lambda (pathname)
+                              (push pathname acc)))
+          (push pathname acc)))))
 
 (defun run-loop (pathnames mtimes callback delay)
   "The main loop constantly polling the filesystem"
@@ -29,8 +29,10 @@
     (map nil
          #'(lambda (pathname)
              (let ((mtime (mtime pathname)))
-               (unless (eq mtime
-                           (gethash pathname mtimes))
+               (unless (eql mtime
+                            ;; universal time or nil, so = is ng.
+                            ;; eq between integers is impl-dependent behavior
+                            (gethash pathname mtimes))
                  (funcall callback pathname)
                  (if mtime
                    (setf (gethash pathname mtimes) mtime)
